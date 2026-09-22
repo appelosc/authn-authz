@@ -8,5 +8,14 @@ Content-Type: application/json
 {
     "username":"John Doe",
     "password":"Password123"
+
+}
+###
+POST {{API_URL}}/auth/login
+Content-Type: application/json
+
+{
+    "username":"John Doe",
+    "password":"Password123"
     
 }
