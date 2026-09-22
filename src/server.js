@@ -12,6 +12,9 @@ app.get('/', (req, res) => {
     res.json({ msg: "Docker works" })
 })
 
+const authenticationRouter = require('./routes/authentication')
+app.use('/auth', authenticationRouter)
+
 app.listen(PORT, () => {
     try {
         console.log(`Running on http://localhost:${PORT}`)
