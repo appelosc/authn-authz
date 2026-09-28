@@ -27,9 +27,9 @@ router.post('/register', async (req,res) =>{
         })
     } catch (error) {
         res.status(400).json({
-            message: 'Invalid request'
-        }
-        )
+            message: 'Invalid request',
+            error: error.message
+        })
     }
     
 })
@@ -54,7 +54,7 @@ router.post('/login', async (req,res) =>{
         jwtToken = jwt.sign({
             id: requestedCreds.id,
             username: requestedCreds.username
-        }, process.env.JWT_SECRET, { expiresIn: '1h' })
+        }, process.env.JWT_SECRET, { expiresIn: '30d' })
 
         res.status(200).json({
             message: "Login succesfull",
@@ -64,7 +64,8 @@ router.post('/login', async (req,res) =>{
         
     } catch (error) {
         res.status(401).json({
-            message: "Authorization failed"
+            message: "Authorization failed",
+            error: error.message
         })
     }
 })
