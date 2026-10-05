@@ -15,7 +15,7 @@ app.use(cors({
 }))
 
 app.get('/', (req, res) => {
-    res.json({ msg: "Docker works" })
+    res.json({ msg: "Auth-API" })
 })
 
 const authenticationRouter = require('./routes/authentication')
