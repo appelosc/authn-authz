@@ -11,3 +11,4 @@ services:
       - MODE
       - PORT
       - JWT_SECRET
+      - DATABASE_URL

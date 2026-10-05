@@ -3,17 +3,31 @@ const router = express.Router()
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 const {PrismaClient} = require('@prisma/client')
+const { z } = require('zod')
 
 const prisma = new PrismaClient()
+
+const credentialsSchema = z.object({
+    username: z.string().trim().min(1),
+    password: z.string().min(1)
+})
 
 
 
 router.post('/register', async (req,res) =>{
+    const parsed = credentialsSchema.safeParse(req.body)
+    if(!parsed.success){
+        return res.status(400).json({
+            message: 'Username and password are required'
+        })
+    }
+    const { username, password } = parsed.data
+
     try {
-        const hashPassword = await bcrypt.hash( req.body.password, 10)
+        const hashPassword = await bcrypt.hash(password, 10)
         const user = await prisma.users.create({
             data: {
-                username: req.body.username,
+                username: username,
                 password: hashPassword
             }
         })
@@ -27,32 +41,39 @@ router.post('/register', async (req,res) =>{
         })
     } catch (error) {
         res.status(400).json({
-            message: 'Invalid request',
-            error: error.message
+            message: 'Invalid request'
         })
     }
     
 })
 
 router.post('/login', async (req,res) =>{
+    const parsed = credentialsSchema.safeParse(req.body)
+    if(!parsed.success){
+        return res.status(400).json({
+            message: 'Username and password are required'
+        })
+    }
+    const { username, password } = parsed.data
+
     try {
-        requestedCreds = await prisma.users.findUnique({
-            where: {username: req.body.username}
+        const requestedCreds = await prisma.users.findUnique({
+            where: {username: username}
         })
         
         if(!requestedCreds){
-            return res.status(404).json({
+            return res.status(401).json({
                 message: "Invalid credentials"
             })
         }
-        const credComparison = await bcrypt.compare(req.body.password, requestedCreds.password)
+        const credComparison = await bcrypt.compare(password,requestedCreds.password)
         if(!credComparison){
             return res.status(401).json({
                 message: "Invalid credentials"
             })
         }
-        jwtToken = jwt.sign({
-            id: requestedCreds.id,
+        const jwtToken = jwt.sign({
+            sub: requestedCreds.id,
             username: requestedCreds.username
         }, process.env.JWT_SECRET, { expiresIn: '30d' })
 
@@ -63,9 +84,8 @@ router.post('/login', async (req,res) =>{
         
         
     } catch (error) {
-        res.status(401).json({
-            message: "Authorization failed",
-            error: error.message
+        res.status(500).json({
+            message: "Internal server error"
         })
     }
 })
