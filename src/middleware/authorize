@@ -1,0 +1,25 @@
+const jwt = require('jsonwebtoken')
+const { PrismaClient } = require('@prisma/client')
+const { hashToken } = require('../utils/hash')
+
+const prisma = new PrismaClient()
+
+module.exports = async (req, res, next) => {
+    const authHeader = req.headers['authorization']
+    if (!authHeader) {
+        return res.status(401).json({ message: 'Authorization failed' })
+    }
+    const token = authHeader.split(' ')[1]
+
+    try {
+        req.refreshTokenDecoded = jwt.verify(token, process.env.REFRESH_SECRET)
+        req.refreshToken = token
+        next()
+    } catch (error) {
+        if (error.name === 'TokenExpiredError') {
+            await prisma.tokens.deleteMany({ where: { token: hashToken(token) } })
+                .catch(err => console.error(err))
+        }
+        res.status(401).json({ message: 'Authorization failed' })
+    }
+}
