@@ -4,8 +4,11 @@ const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 const {PrismaClient} = require('@prisma/client')
 const { z } = require('zod')
+const crypto = require('crypto')
 
 const prisma = new PrismaClient()
+const hashToken = (token) =>
+        crypto.createHash('sha256').update(token).digest('hex')
 
 const credentialsSchema = z.object({
     username: z.string().trim().min(1),
@@ -75,11 +78,28 @@ router.post('/login', async (req,res) =>{
         const jwtToken = jwt.sign({
             sub: requestedCreds.id,
             username: requestedCreds.username
-        }, process.env.JWT_SECRET, { expiresIn: '30d' })
+        }, process.env.JWT_SECRET, { expiresIn: '15m' })
+        const refreshToken = jwt.sign({
+            sub: requestedCreds.id,
+            jti: crypto.randomUUID()
+        }, process.env.REFRESH_SECRET, {expiresIn:'30d'})
+        const {iat,exp} = jwt.decode(refreshToken)
+        
+
+        await prisma.tokens.create({
+            data: {
+                user_id: Number(requestedCreds.id),
+                token: hashToken(refreshToken),
+                issued_at: new Date(iat * 1000),
+                expires_at: new Date(exp * 1000)
+            }
+        })
+        
 
         res.status(200).json({
             message: "Login succesfull",
-            token: jwtToken
+            token: jwtToken,
+            refresh: refreshToken
         });
         
         
