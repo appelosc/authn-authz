@@ -143,7 +143,7 @@ router.post('/refresh', authorize, async (req, res) => {
     }
 
 })
-router.delete('/logout', async (req, res) => {
+router.post('/logout', async (req, res) => {
     const authHeader = req.headers['authorization']
     if (!authHeader) {
         return res.status(401).json({ message: 'Authorization failed' })
