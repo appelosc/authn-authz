@@ -10,7 +10,6 @@ console.log(`Node.js ${process.version}`)
 app.use(express.json())
 app.use(cors({
     origin: [ 
-        'http://localhost:5173',
         'https://people.arcada.fi',
         'http://people.arcada.fi',
     ]
