@@ -1,69 +1,72 @@
 # authn-authz
 
-Ett API för autentisering och auktorisering, byggt med Express, Prisma (PostgreSQL), bcrypt och JWT.
+An API for authentication and authorization, built with Express, Prisma (PostgreSQL), bcrypt and JWT.
 
-## Innehåll
+It issues the JWTs used by the Notes Board App ([REST-api-notes](https://github.com/appelosc/REST-api-notes), [notes-frontend](https://github.com/appelosc/notes-frontend)). The `project2` branch adds refresh tokens (`POST /auth/refresh` and `POST /auth/logout`), which the Clipboard Sync App ([websocket](https://github.com/appelosc/websocket), [websocket-frontend](https://github.com/appelosc/websocket-frontend), [electron-websocket](https://github.com/appelosc/electron-websocket)) uses. This README describes the `main` branch.
 
-- [Kom igång](#kom-igång)
-- [Miljövariabler](#miljövariabler)
+## Contents
+
+- [Getting started](#getting-started)
+- [Environment variables](#environment-variables)
 - [Endpoints](#endpoints)
   - [GET /](#get-)
   - [POST /auth/register](#post-authregister)
   - [POST /auth/login](#post-authlogin)
-- [Använda JWT-token](#använda-jwt-token)
-- [Datamodell](#datamodell)
+- [Using the JWT](#using-the-jwt)
+- [Data model](#data-model)
 - [CORS](#cors)
+- [Testing the API](#testing-the-api)
 
-## Kom igång
+## Getting started
 
-### Med Docker
+### With Docker
 
 ```bash
 docker compose up --build
 ```
 
-API:t blir tillgängligt på `http://localhost:3001` (port 3001 på värden mappas till port 3000 i containern).
+The API is available at `http://localhost:3001` (port 3001 on the host maps to port 3000 in the container).
 
-Sätt `MODE=development` för att köra med `nodemon` (automatisk omstart vid ändringar).
+Set `MODE=development` to run with `nodemon` (automatic restart on changes).
 
-### Lokalt
+### Locally
 
 ```bash
 npm install
 npx prisma generate
-npm run dev     # utveckling (nodemon)
-npm start       # produktion
+npm run dev     # development (nodemon)
+npm start       # production
 ```
 
-API:t körs då på `http://localhost:3000` (eller den port som anges i `PORT`).
+The API then runs at `http://localhost:3000` (or the port set in `PORT`).
 
-## Miljövariabler
+## Environment variables
 
-Skapa en `.env`-fil i projektets rot:
+Create a `.env` file in the project root:
 
-| Variabel       | Beskrivning                                                   | Standard |
-| -------------- | ------------------------------------------------------------- | -------- |
-| `PORT`         | Porten servern lyssnar på                                     | `3000`   |
-| `DATABASE_URL` | Anslutningssträng till PostgreSQL                             | –        |
-| `JWT_SECRET`   | Hemlig nyckel som används för att signera JWT-token           | –        |
-| `MODE`         | `development` startar med `nodemon`, annars `npm start` (Docker) | –     |
+| Variable       | Description                                                         | Default |
+| -------------- | ------------------------------------------------------------------- | ------- |
+| `PORT`         | Port the server listens on                                          | `3000`  |
+| `DATABASE_URL` | PostgreSQL connection string                                        | –       |
+| `JWT_SECRET`   | Secret key used to sign JWTs                                        | –       |
+| `MODE`         | `development` starts with `nodemon`, otherwise `npm start` (Docker) | –       |
 
-Exempel:
+Example:
 
 ```env
 PORT=3000
 DATABASE_URL=postgresql://user:password@localhost:5432/authdb
-JWT_SECRET=byt-ut-mot-en-lang-slumpmassig-strang
+JWT_SECRET=replace-with-a-long-random-string
 MODE=development
 ```
 
 ## Endpoints
 
-Alla request- och response-kroppar är JSON. Skicka `Content-Type: application/json` i anrop med body.
+All request and response bodies are JSON. Send `Content-Type: application/json` in requests with a body.
 
 ### GET /
 
-Enkel hälsokontroll.
+Simple health check.
 
 **Response `200 OK`**
 
@@ -75,14 +78,14 @@ Enkel hälsokontroll.
 
 ### POST /auth/register
 
-Skapar en ny användare. Lösenordet hashas med bcrypt innan det sparas.
+Creates a new user. The password is hashed with bcrypt before it is stored.
 
 **Request body**
 
-| Fält       | Typ    | Krav                                            |
-| ---------- | ------ | ----------------------------------------------- |
-| `username` | string | Obligatoriskt, minst 1 tecken (trimmas), unikt  |
-| `password` | string | Obligatoriskt, minst 1 tecken                   |
+| Field      | Type   | Requirements                                     |
+| ---------- | ------ | ------------------------------------------------ |
+| `username` | string | Required, at least 1 character (trimmed), unique |
+| `password` | string | Required, at least 1 character                   |
 
 ```json
 {
@@ -93,7 +96,7 @@ Skapar en ny användare. Lösenordet hashas med bcrypt innan det sparas.
 
 **Responses**
 
-`201 Created` – användaren skapades
+`201 Created`: the user was created
 
 ```json
 {
@@ -105,13 +108,13 @@ Skapar en ny användare. Lösenordet hashas med bcrypt innan det sparas.
 }
 ```
 
-`400 Bad Request` – `username` eller `password` saknas/är tomt
+`400 Bad Request`: `username` or `password` is missing or empty
 
 ```json
 { "message": "Username and password are required" }
 ```
 
-`400 Bad Request` – användarnamnet är redan taget eller annat fel vid skapandet
+`400 Bad Request`: the username is already taken, or another error occurred during creation
 
 ```json
 { "message": "Invalid request" }
@@ -121,14 +124,14 @@ Skapar en ny användare. Lösenordet hashas med bcrypt innan det sparas.
 
 ### POST /auth/login
 
-Loggar in en användare och returnerar en JWT.
+Logs a user in and returns a JWT.
 
 **Request body**
 
-| Fält       | Typ    | Krav                          |
-| ---------- | ------ | ----------------------------- |
-| `username` | string | Obligatoriskt, minst 1 tecken |
-| `password` | string | Obligatoriskt, minst 1 tecken |
+| Field      | Type   | Requirements                   |
+| ---------- | ------ | ------------------------------ |
+| `username` | string | Required, at least 1 character |
+| `password` | string | Required, at least 1 character |
 
 ```json
 {
@@ -139,7 +142,7 @@ Loggar in en användare och returnerar en JWT.
 
 **Responses**
 
-`200 OK` – inloggningen lyckades
+`200 OK`: the login succeeded
 
 ```json
 {
@@ -148,13 +151,13 @@ Loggar in en användare och returnerar en JWT.
 }
 ```
 
-`400 Bad Request` – `username` eller `password` saknas/är tomt
+`400 Bad Request`: `username` or `password` is missing or empty
 
 ```json
 { "message": "Username and password are required" }
 ```
 
-`401 Unauthorized` – fel användarnamn eller lösenord
+`401 Unauthorized`: wrong username or password
 
 ```json
 { "message": "Invalid credentials" }
@@ -166,9 +169,9 @@ Loggar in en användare och returnerar en JWT.
 { "message": "Internal server error" }
 ```
 
-## Använda JWT-token
+## Using the JWT
 
-Token signeras med `JWT_SECRET` (HS256) och är giltig i **30 dagar**. Payload:
+The token is signed with `JWT_SECRET` (HS256) and is valid for **30 days**. Payload:
 
 ```json
 {
@@ -179,37 +182,37 @@ Token signeras med `JWT_SECRET` (HS256) och är giltig i **30 dagar**. Payload:
 }
 ```
 
-Klienter skickar normalt token i `Authorization`-headern:
+Clients normally send the token in the `Authorization` header:
 
 ```
 Authorization: Bearer <token>
 ```
 
-## Datamodell
+## Data model
 
-Tabellen `users` (PostgreSQL, via Prisma):
+The `users` table (PostgreSQL, via Prisma):
 
-| Kolumn       | Typ       | Beskrivning                      |
-| ------------ | --------- | -------------------------------- |
-| `id`         | Int       | Primärnyckel, autoincrement      |
-| `username`   | VarChar   | Unikt                            |
-| `password`   | VarChar   | bcrypt-hash (10 salt rounds)     |
-| `created_at` | Timestamp | Sätts vid skapande               |
-| `updated_at` | Timestamp | Uppdateras automatiskt           |
+| Column       | Type      | Description                  |
+| ------------ | --------- | ---------------------------- |
+| `id`         | Int       | Primary key, autoincrement   |
+| `username`   | VarChar   | Unique                       |
+| `password`   | VarChar   | bcrypt hash (10 salt rounds) |
+| `created_at` | Timestamp | Set on creation              |
+| `updated_at` | Timestamp | Updated automatically        |
 
 ## CORS
 
-Anrop tillåts från följande origins:
+Requests are allowed from the following origins:
 
 - `http://localhost:5173`
 - `https://people.arcada.fi`
 - `http://people.arcada.fi`
 
-## Testa API:t
+## Testing the API
 
-`src/test/authentication.http` innehåller färdiga anrop för VS Code-tillägget REST Client.
+`src/test/authentication.http` contains ready-made requests for the VS Code extension REST Client.
 
-Med curl:
+With curl:
 
 ```bash
 curl -X POST http://localhost:3001/auth/register \
